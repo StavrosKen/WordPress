@@ -46,31 +46,28 @@ genesis();
 remove_action( 'genesis_sidebar', 'genesis_do_sidebar' );
 
 //--------------------- Remove secondary sidebar----------------------------------------------------------
+
 unregister_sidebar( 'header-right' );
 unregister_sidebar( 'sidebar' );
 unregister_sidebar( 'sidebar-alt' );
 
-
 //-------------------------------- Add custom sidebar ----------------------------------------------------------
-genesis_register_sidebar(array(
-	'name'=>'Alternative Sidebar',
-	'id' => 'sidebar-alternative',
-	'description' => 'This is an alternative sidebar',
-	'before_widget' => '<div id="%1$s"><div class="widget %2$s">',
-	'after_widget'  => "</div></div>\n",
-	'before_title'  => '<h4><span>',
-	'after_title'   => "</span></h4>\n"
-));
 
+add_action( 'widgets_init', 'twentyten_widgets_init' );
+function twentyten_widgets_init() {
+  register_sidebar( array(
+    'name' => __( 'News Sidebar', 'yoursite' ),
+    'id' => 'sidebar-news',
+    'description' => __( 'The News Sidebar Area', 'yoursite' ),
+  ));
+}
 
-
+//get it
+dynamic_sidebar('sidebar-news');
 
 //-----------------Wp Query Loop--------------------------------------------------------------------------
 
 global $post;
-
-
-
 $loop = new WP_Query();
 $query_args1 = array( 'post_status'=>'publish', 'posts_per_page=>3','showposts'=>'3','post_type'=>'post','paged'=>$paged, 'cat'=>get_cat_ID($cat_name='Iz Synlaba'));
 $loop->query(  $query_args1 );
@@ -80,6 +77,7 @@ while ( $loop->have_posts() ) : $loop->the_post();
 endwhile;
 
 //-------------Cache Burst CSS-----------------------------------------------------------------------------
+
 add_filter( 'stylesheet_uri', 'child_stylesheet_uri' );
 
 function child_stylesheet_uri( $stylesheet_uri ) {
@@ -87,15 +85,12 @@ function child_stylesheet_uri( $stylesheet_uri ) {
 }
 
 //-------------Custom Footer---------------------------------------------------------------------------
+
 remove_action( 'genesis_footer', 'genesis_do_footer' );
 add_action( 'genesis_footer', 'child_footer_html' );
 
 function child_footer_html() { 
  }
- 
- 
- 
- 
  
 //--------------------------------Security-------------------------------------------------------------------------
 # APACHE .HTACCESS
@@ -118,3 +113,132 @@ RewriteCond %{REQUEST_URI} ^(.*)?wp-config\.php(.*)$
 RewriteCond %{REMOTE_ADDR} !^111\.222\.333\.444$
 RewriteRule ^(.*)$ - [R=403,L]
 </IfModule>
+
+//----------------------------------------GET POSTS IN SPECIFIC ORDER---------------------------------------------
+
+$include = array(
+476,
+500,
+478,
+476,
+491,
+490,
+477
+
+);
+
+$args = array( 'post_status'=>'publish', 'post_type' => 'doctor', 'posts_per_page' => 6, 'post__in'=>$include, 'orderby'=>'post__in' );
+$loop = new WP_Query( $args );
+
+while ( $loop->have_posts() ) : $loop->the_post();
+
+//---------------------SEND MANDRIL MAIL-------------------------------------------------------------------
+
+//CALL HERE
+
+$(".send").click(function (){
+		
+		
+var ajaxurl = "<?php echo admin_url('admin-ajax.php');?>";
+var form=$(this).parent();
+var tko=$(this).parent().find(".tkopreporuca").val();
+var recMailTo=$(this).parent().find(".recToEmail").val();
+var what="www.synlab.hr"+$(this).parent().parent().find(".doctorImage+a").attr("href");
+
+
+    $.ajax({
+    	type: 'POST',
+        url: ajaxurl,  
+        cache: false,
+        data: {
+            'action' :'sendAMail',
+             'recfrom':tko,
+             'recto':recMailTo,
+             'what':what
+             
+        },
+        success:function(dataaa) {
+            
+
+  form.html("Hvala na preporuci!");
+        }
+    }); 
+});	
+
+//RECEIVE HERE (IN FUNCTIONS.PHP)
+
+add_action('wp_ajax_sendAMailToDoc', 'sendthemailnow2');
+add_action( 'wp_ajax_nopriv_sendAMailToDoc', 'sendthemailnow2' );
+function sendthemailnow2() {
+$recfrom=$_REQUEST["recfrom1"];
+$recto=$_REQUEST["recto1"];
+$what=$_REQUEST["toDoc1"];
+try {
+    $mandrill1 = new Mandrill('hFwyaYJ-NOdbNLnywhpp_A');
+    $message = array(
+        'html' => '<p>'.$recto.'</p>',
+        'text' => 'Example text content',
+        'subject' => 'Synlab Message from '.$recfrom,
+        'from_email' => $recfrom,
+        'from_name' => $recfrom,
+        'to' => array(
+            array(
+                'email' => $what,
+                'name' => '',
+                'type' => 'to'
+            )
+        ),
+        'headers' => array('Reply-To' => 'synlab@synlab.com'),
+        'important' => false,
+        'track_opens' => null,
+        'track_clicks' => null,
+        'auto_text' => null,
+        'auto_html' => null,
+        'inline_css' => null,
+        'url_strip_qs' => null,
+        'preserve_recipients' => null,
+        'view_content_link' => null,
+        'bcc_address' => 'synlab@synlab.com',
+        'tracking_domain' => null,
+        'signing_domain' => null,
+        'return_path_domain' => null,
+        'merge' => true,
+        'merge_language' => 'mailchimp',
+        'global_merge_vars' => array(
+            array(
+                'name' => 'merge1',
+                'content' => 'merge1 content'
+            )
+        )
+    );
+   
+
+    $result = $mandrill1->messages->send($message);
+    print_r($result);
+    /*
+    Array
+    (
+        [0] => Array
+            (
+                [email] => recipient.email@example.com
+                [status] => sent
+                [reject_reason] => hard-bounce
+                [_id] => abc123abc123abc123abc123abc123
+            )
+    
+    )
+    */
+} catch(Mandrill_Error $e) {
+    // Mandrill errors are thrown as exceptions
+    echo 'A mandrill error occurred: ' . get_class($e) . ' - ' . $e->getMessage();
+    // A mandrill error occurred: Mandrill_Unknown_Subaccount - No subaccount exists with the id 'customer-123'
+    throw $e;
+}
+
+
+
+
+echo $recfrom.$recto;
+
+exit();	
+}

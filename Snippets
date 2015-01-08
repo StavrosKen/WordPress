@@ -242,3 +242,67 @@ echo $recfrom.$recto;
 
 exit();	
 }
+
+
+//------------Make ARCHIVE.php show CATEGORIES----------------------
+
+//first take the quiery string of WP
+global $query_string;
+parse_str( $query_string, $args );
+
+//divide it int array
+$args['post_type'] = 'post';
+$args['posts_per_page'] = 4;
+$args['paged'] = $paged;
+$args['post_status'] = 'publish';
+
+//load a query
+$loop = new WP_Query();
+
+//make a normal query if the page is your starting page.So it can show all categories
+if ($args[pagename]=='news'){
+$args = array( 'post_status'=>'publish', 'showresults'=>4, 'posts_per_page'=>4,'post_type'=>'post','paged'=>$paged);
+}
+
+//load args in the query and run it
+$loop->query( $args);
+while ( $loop->have_posts() ) : $loop->the_post();
+endwhile;
+
+//-----------------------Archive Pagination---------------------------------------
+
+//make sure pagination and result# are set in theme settings and Settings->Reading
+$paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
+
+// then include this in the wp query
+'paged'=>$paged
+
+//and include the pager 
+<div id="pagerr">
+<?php
+// pager
+if($loop->max_num_pages>1){
+    	if($_GET['paged']!='1'&& $_GET['paged']!=0){
+       		$previous=$_GET['paged']-1;
+       	}
+     
+     	if($paged!=$loop->max_num_pages){
+       		if($_GET['paged']){
+       			$next=$_GET['paged']+1;
+       	
+       		}
+       	else{
+       		$next=2;	
+       	}
+       	 }
+       	 if($_GET['paged']!='1'&& $_GET['paged']!=0){?>
+        	<a id="pre" href="<?php echo '?paged='.$previous;?>">
+        	<div id="previousbtn"></div>
+        	</a>
+         <?php } 
+         if($paged!=$loop->max_num_pages){ ?>
+    		 <a id="next" href="<?php echo '?paged='.$next;?>">
+        	 <div id="nextbtn"></div>
+        	 </a>
+        <?php }  } ?>
+ </div>
